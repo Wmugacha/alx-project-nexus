@@ -25,7 +25,7 @@ The **ProDev Backend Engineering Program** is a rigorous, hands-on journey into 
 
 * **Database Design**: Created relational schemas, normalized data, and implemented migrations using Django ORM and MySQL/PostgreSQL.
 * **Asynchronous Programming**: Gained foundational knowledge of `asyncio` and Django Channels for handling real-time data and I/O-bound operations.
-* **Caching Strategies**: Improved performance using in-memory caching (e.g. Redis), function decorators, and query optimization.
+* **Caching Strategies**: Improved performance using in-memory caching with Redis, function decorators, and query optimization.
 * **Authentication & Authorization**: Implemented secure login systems using JWTs and Django Rest Framework permissions.
 
 ---
