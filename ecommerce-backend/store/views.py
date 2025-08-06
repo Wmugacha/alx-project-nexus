@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .pagination import ResultsSetPagination
+from .permissions import IsAdminOrReadOnly, ReviewPermissions
 from .models import (
     Category, Product, ProductImage, ProductVariant,
     Cart, CartItem, Order, OrderItem, Payment,
@@ -19,7 +20,7 @@ from .filters import (
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_class = CategoryFilter
 
@@ -27,7 +28,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by('-created_at')
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['title', 'brand']
     filterset_class = ProductFilter
@@ -37,13 +38,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 class ProductImageViewSet(viewsets.ModelViewSet):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class ProductVariantViewSet(viewsets.ModelViewSet):
     queryset = ProductVariant.objects.all().order_by('-created_at')
     serializer_class = ProductVariantSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ProductVariantFilter
     ordering_fields = ['price', 'created_at']
@@ -111,7 +112,7 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ReviewPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ReviewFilter
     ordering_fields = ['rating', 'created_at']
@@ -119,6 +120,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = ResultsSetPagination
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Review.objects.filter(user=self.request.user)
-        return Review.objects.none()
+        queryset = super().get_queryset()
+        if self.request.user.is_staff:
+            return queryset
+        else:
+            return queryset.filter(is_approved=True)
