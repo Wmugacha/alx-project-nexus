@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .pagination import ResultsSetPagination
 from .models import (
     Category, Product, ProductImage, ProductVariant,
     Cart, CartItem, Order, OrderItem, Payment,
@@ -9,18 +11,27 @@ from .serializers import (
     CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer,
     OrderShippingAddressSerializer, ShippingAddressSerializer, ReviewSerializer
 )
-
+from .filters import (
+    CategoryFilter, ProductFilter, ProductVariantFilter,
+    OrderFilter, ReviewFilter
+)
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CategoryFilter
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().order_by('-created_at')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title', 'brand']
+    filterset_class = ProductFilter
+    pagination_class = ResultsSetPagination
 
 
 class ProductImageViewSet(viewsets.ModelViewSet):
@@ -30,9 +41,13 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 
 
 class ProductVariantViewSet(viewsets.ModelViewSet):
-    queryset = ProductVariant.objects.all()
+    queryset = ProductVariant.objects.all().order_by('-created_at')
     serializer_class = ProductVariantSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = ProductVariantFilter
+    ordering_fields = ['price', 'created_at']
+    pagination_class = ResultsSetPagination
 
 
 class CartViewSet(viewsets.ModelViewSet):
@@ -54,9 +69,12 @@ class CartItemViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = OrderFilter
+    pagination_class = ResultsSetPagination
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).order_by('-created_at')
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):
@@ -94,6 +112,11 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ReviewFilter
+    ordering_fields = ['rating', 'created_at']
+    search_fields = ['product__title', 'comment']
+    pagination_class = ResultsSetPagination
 
     def get_queryset(self):
         if self.request.user.is_authenticated:

@@ -1,10 +1,14 @@
 asgiref==3.8.1
 Django==4.2.23
 django-countries==7.6.1
+django-filter==24.3
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
+Faker==35.2.2
 pillow==10.4.0
 psycopg2-binary==2.9.10
 PyJWT==2.9.0
+python-dateutil==2.9.0.post0
+six==1.17.0
 sqlparse==0.5.3
 typing_extensions==4.13.2
