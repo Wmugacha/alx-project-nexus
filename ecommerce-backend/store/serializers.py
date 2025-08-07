@@ -73,7 +73,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['price_at_addition', 'created_at', 'updated_at']
         extra_kwargs = {
-            'cart': {'write_only': True}
+            'cart': {'read_only': True}
         }
 
 class CartSerializer(serializers.ModelSerializer):
