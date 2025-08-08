@@ -7,6 +7,14 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
+import stripe
+import json
+
 from .models import (
     Category, Product, ProductImage, ProductVariant,
     Cart, CartItem, Order, OrderItem, Payment,
@@ -61,6 +69,8 @@ class CartViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Cart.objects.none()
         return Cart.objects.filter(user=self.request.user)
 
 
@@ -69,6 +79,8 @@ class CartItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CartItem.objects.none()
         return CartItem.objects.filter(cart__user=self.request.user)
 
 
@@ -113,6 +125,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     pagination_class = ResultsSetPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Order.objects.none()
         return Order.objects.filter(user=self.request.user).order_by('-created_at')
 
 
@@ -189,7 +203,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 full_name=shipping_address.full_name,
                 address_line_1=shipping_address.address_line_1,
                 address_line_2=shipping_address.address_line_2,
-                #apartment=shipping_address.apartment,
+                apartment=getattr(shipping_address, 'apartment', None),
                 city=shipping_address.city,
                 state=shipping_address.state,
                 postal_code=shipping_address.postal_code,
@@ -210,6 +224,8 @@ class OrderItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return OrderItem.objects.none()
         return OrderItem.objects.filter(order__user=self.request.user)
 
 
@@ -218,6 +234,8 @@ class OrderShippingAddressViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return OrderShippingAddress.objects.none()
         return OrderShippingAddress.objects.filter(order__user=self.request.user)
 
 
@@ -226,7 +244,168 @@ class PaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Payment.objects.none()
         return Payment.objects.filter(order__user=self.request.user)
+
+
+    @action(detail=False, methods=['post'], url_path='initiate')
+    def initiate_payment(self, request):
+        """
+        Initiates a payment by creating a Stripe PaymentIntent.
+        Expects 'order_id' and 'payment_method' ('card') in request data.
+        """
+        user = request.user
+        order_id = request.data.get('order_id')
+        payment_method = request.data.get('payment_method', 'card')
+
+        if not order_id:
+            return Response(
+                {"detail": "Order ID is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            order = get_object_or_404(Order, id=order_id, user=user)
+        except Order.DoesNotExist:
+            return Response(
+                {"detail": "Order not found or does not belong to user."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Prevent initiating payment for already paid/processed orders
+        if order.status in ['paid', 'processing']:
+             return Response(
+                {"detail": "Order has already been paid or is being processed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Ensure order has a total price
+        if order.total_price <= 0:
+            return Response(
+                {"detail": "Order total must be greater than zero."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            # Create a Payment record with 'requires_action' status initially
+            # This payment record will be updated by webhooks
+            payment = Payment.objects.create(
+                order=order,
+                amount=order.total_price, # Use the actual order total
+                payment_method=payment_method,
+                status='requires_action' # Initial status for PaymentIntent flow
+            )
+
+            try:
+                # Create a Stripe PaymentIntent
+                # amount needs to be in cents (or smallest currency unit)
+                payment_intent = stripe.PaymentIntent.create(
+                    amount=int(order.total_price * 100),
+                    currency="usd", # Or your desired currency
+                    payment_method_types=[payment_method],
+                    metadata={'order_id': str(order.id), 'payment_id': str(payment.id)}
+                )
+
+                # Update Payment record with PaymentIntent ID
+                payment.stripe_payment_intent_id = payment_intent.id
+                payment.save()
+
+                return Response(
+                    {
+                        "detail": "Payment intent created successfully.",
+                        "client_secret": payment_intent.client_secret,
+                        "payment_id": payment.id, # Return your internal payment ID
+                        "order_id": order.id
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            except stripe.error.StripeError as e:
+                # Handle Stripe API errors
+                payment.status = 'failed'
+                payment.save()
+                return Response(
+                    {"detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                # Handle other unexpected errors
+                payment.status = 'failed'
+                payment.save()
+                return Response(
+                    {"detail": "An unexpected error occurred during payment initiation."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    event = None
+
+    try:
+        # 1. Verify Webhook Signature (CRITICAL SECURITY STEP)
+        # This protects against fake webhook calls by verifying the payload with your secret
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        # Invalid payload
+        print(f"Webhook Error: Invalid payload: {e}")
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        print(f"Webhook Error: Invalid signature: {e}")
+        return HttpResponse(status=400)
+    except Exception as e:
+        # Catch any other unexpected errors during event construction
+        print(f"Webhook Error: Unexpected error during event construction: {e}")
+        return HttpResponse(status=400)
+
+    # 2. Handle the event
+    event_type = event['type']
+    event_data = event['data']['object'] # The Stripe object related to the event
+
+    print(f"Received Stripe event: {event_type}") # For debugging
+
+    with transaction.atomic():
+        if event_type == 'payment_intent.succeeded':
+            # A payment was successfully captured
+            payment_intent_id = event_data['id']
+            try:
+                payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
+                payment.status = 'succeeded'
+                payment.save()
+
+                order = payment.order
+                order.status = 'paid' # Update order status to 'paid'
+                order.save()
+                print(f"PaymentIntent {payment_intent_id} succeeded. Order {order.id} status updated to 'paid'.")
+            except Payment.DoesNotExist:
+                print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
+                # It's generally safe to return 200 even if not found, to prevent Stripe retrying
+                return HttpResponse(status=200) 
+
+        elif event_type == 'payment_intent.payment_failed':
+            # A payment failed
+            payment_intent_id = event_data['id']
+            try:
+                payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
+                payment.status = 'failed'
+                payment.save()
+
+                order = payment.order
+                order.status = 'payment_failed' # Update order status to 'payment_failed'
+                order.save()
+                print(f"PaymentIntent {payment_intent_id} failed. Order {order.id} status updated to 'payment_failed'.")
+            except Payment.DoesNotExist:
+                print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
+                return HttpResponse(status=200)
+
+        # Future: add more events to Handle refunds
+
+    return HttpResponse(status=200)
 
 
 class ShippingAddressViewSet(viewsets.ModelViewSet):
@@ -234,6 +413,8 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ShippingAddress.objects.none()
         return ShippingAddress.objects.filter(user=self.request.user)
 
 
@@ -248,6 +429,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = ResultsSetPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Review.objects.none()
         queryset = super().get_queryset()
         if self.request.user.is_staff:
             return queryset

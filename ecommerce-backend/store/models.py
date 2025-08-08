@@ -168,24 +168,30 @@ class OrderItem(models.Model):
 class Payment(models.Model):
     PAYMENT_STATUS_CHOICES = (
         ('pending', 'Pending'),
+        ('requires_action', 'Requires Customer Action'),
+        ('succeeded', 'Succeeded'),
         ('failed', 'Failed'),
-        ('paid', 'Paid'),
-        ('captured', 'Captured'),
         ('refunded', 'Refunded'),
+        ('canceled', 'Canceled'),
     )
 
     order = models.OneToOneField(Order, on_delete=models.CASCADE)
     payment_method = models.CharField(max_length=50, default="stripe")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_status = models.CharField(max_length=50, default="pending", db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='pending'
+    )
     currency = models.CharField(max_length=3, default='USD')
     transaction_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
     payment_gateway_response = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Payment({self.id}) - {self.payment_status}"
+        return f"Payment({self.id}) - {self.status}"
 
 
 class OrderShippingAddress(models.Model):
