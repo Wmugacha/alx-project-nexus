@@ -19,12 +19,15 @@ from django.urls import path, include
 from users.views import CustomTokenObtainPairView
 from store import views
 from store.swagger import schema_view
+from django.views.generic.base import RedirectView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/swagger/', permanent=False), name='index'),
+
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/store/', include('store.urls')),

@@ -1,14 +1,10 @@
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.utils.text import slugify
 import os
-import django
 import random
 from faker import Faker
-from django.utils.text import slugify
-from django.db import transaction
 import django.db.utils
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ecommerce_project.settings")
-django.setup()
-
 from django.contrib.auth import get_user_model
 from store.models import Category, Product, ProductVariant, ShippingAddress, Review
 
@@ -28,11 +24,10 @@ def create_users(n=50):
     users = []
     for _ in range(n):
         email = fake.unique.email()
-        username = email.split('@')[0][:30]  # Truncate to avoid username length issues
+        username = email.split('@')[0][:30]
         try:
             user = User.objects.create_user(
                 email=email,
-                #username=username,
                 password="testpassword123",
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
@@ -168,14 +163,20 @@ def create_reviews(products, users):
         if len(available_users) < num_reviews:
             print(f"⚠️ Could only create {num_reviews - len(available_users)} reviews for {product.title} due to unique constraints")
 
-if __name__ == "__main__":
-    print("🌱 Seeding database...")
-    with transaction.atomic():
-        clear_data()
-        users = create_users(50)
-        create_shipping_addresses(users)
-        categories = create_categories()
-        products = create_products(categories, 15)
-        create_variants(products, 4)
-        create_reviews(products, users)
-    print("✅ Done seeding!")
+
+class Command(BaseCommand):
+    help = 'Seeds the database with fake data for development.'
+
+    def handle(self, *args, **options):
+        self.stdout.write("🌱 Seeding database...")
+
+        with transaction.atomic():
+            clear_data()
+            users = create_users(50)
+            create_shipping_addresses(users)
+            categories = create_categories()
+            products = create_products(categories, 15)
+            create_variants(products, 4)
+            create_reviews(products, users)
+
+        self.stdout.write(self.style.SUCCESS("✅ Done seeding!"))
