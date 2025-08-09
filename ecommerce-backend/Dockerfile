@@ -15,8 +15,10 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project
 COPY . /app/
 
+RUN python manage.py collectstatic --noinput
+
 # Expose the port your app runs on
 EXPOSE 8000
 
 # Run Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "ecommerce_project.wsgi:application"]
+CMD python manage.py migrate --noinput && gunicorn ecommerce_project.wsgi:application --bind 0.0.0.0:$PORT
