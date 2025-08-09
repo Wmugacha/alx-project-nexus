@@ -14,3 +14,9 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy project
 COPY . /app/
+
+# Expose the port your app runs on
+EXPOSE 8000
+
+# Run Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "eccommerce_project.wsgi:application"]
