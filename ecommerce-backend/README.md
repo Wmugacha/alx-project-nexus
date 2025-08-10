@@ -13,8 +13,8 @@ This backend simulates a real-world e-commerce application, providing comprehens
 * **Shopping Cart & Order Management**
 * **Payment Processing with Stripe Checkout Sessions**
 * **Robust Webhook Handling** for asynchronous payment updates
-* **Background Task Processing (Celery & RabbitMQ)** for efficiency - **To be added**
-* **Caching (Redis)** for performance - **To be added**
+* **Background Task Processing (Celery & RabbitMQ)** for efficiency - `To be added`
+* **Caching (Redis)** for performance - `To be added`
 * **Interactive API Documentation (Swagger/OpenAPI)**
 
 The application is containerized with Docker and deployed to Railway, utilizing continuous integration for automated deployments.
@@ -29,8 +29,8 @@ The application is containerized with Docker and deployed to Railway, utilizing 
 * **Django Simple JWT** — Secure, token-based authentication (JWT)
 * **drf-yasg** — Automatic generation of interactive Swagger/OpenAPI documentation
 * **Stripe** — Leading payment gateway for handling payments and webhooks (specifically **Stripe Checkout Sessions**)
-* **Celery** + **RabbitMQ** — Distributed task queue for asynchronous background processing
-* **Redis** — In-memory data store for caching and as Celery broker/backend
+* **Celery** + **RabbitMQ** — Distributed task queue for asynchronous background processing `To be added`
+* **Redis** — In-memory data store for caching and as Celery broker/backend `To be added`
 * **Docker** — Containerization for isolated and consistent development/production environments
 * **Whitenoise** — Efficient static file serving in production (for Django Admin and Swagger UI assets)
 * **Faker** — Library for generating realistic fake data for seeding
@@ -109,7 +109,7 @@ To get the project running on your local machine for development:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/alx-project-nexus.git](https://github.com/your-username/alx-project-nexus.git)
+    git clone `https://github.com/Wmugacha/alx-project-nexus.git`
     cd alx-project-nexus/ecommerce-backend
     ```
 
@@ -178,7 +178,7 @@ This backend is continuously deployed to [Railway](https://alxprojectnexus.up.ra
 * **Environment Variables**: All sensitive keys and configurations (e.g., `DATABASE_URL`, `SECRET_KEY`, Stripe keys) are securely managed as environment variables on the Railway platform.
 
 **Live API Documentation:** Access the interactive Swagger UI for the deployed application at:
-`https://alxprojectnexus.up.railway.app/swagger/`
+[API Documentation](https://alxprojectnexus.up.railway.app/swagger/)
 
 ---
 
