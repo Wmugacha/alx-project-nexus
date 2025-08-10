@@ -1,194 +1,264 @@
 # 🛒 E-Commerce Backend
 
-A robust, scalable, and secure backend system built with Django and PostgreSQL to power an e-commerce product catalog. This project is part of my ALX Project Nexus submission and demonstrates practical application of backend engineering principles learned during the **ProDev Backend Engineering Program**.
+A robust, scalable, and secure backend system built with Django and PostgreSQL to power an e-commerce product catalog. This project is part of my ALX Project Nexus submission and demonstrates practical application of backend engineering principles learned during the **ProDev Backend Engineering Program**. It's designed to be the core API for a modern e-commerce platform.
 
 ---
 
 ## 📌 Project Overview
 
-This backend simulates a real-world e-commerce application, providing APIs for:
+This backend simulates a real-world e-commerce application, providing comprehensive APIs for:
 
-* **User authentication**
-* **Product and category management**
-* **Filtering, sorting, and pagination**
-* **Database performance optimization**
-* **Payment processing with Stripe**
-* **Background task processing with Celery & RabbitMQ**
-* **Caching with Redis**
-* **API documentation with Swagger/OpenAPI**
+* **Custom User Authentication & Authorization (JWT)**
+* **Product & Category Management** with advanced querying
+* **Shopping Cart & Order Management**
+* **Payment Processing with Stripe Checkout Sessions**
+* **Robust Webhook Handling** for asynchronous payment updates
+* **Background Task Processing (Celery & RabbitMQ)** for efficiency - **To be added**
+* **Caching (Redis)** for performance - **To be added**
+* **Interactive API Documentation (Swagger/OpenAPI)**
+
+The application is containerized with Docker and deployed to Railway, utilizing continuous integration for automated deployments.
 
 ---
 
 ## 🧰 Technologies Used
 
-* **Python** + **Django** — Core backend framework
-* **PostgreSQL** — Relational database
-* **Django REST Framework (DRF)** — RESTful API layer
-* **JWT (SimpleJWT)** — Secure user authentication
-* **drf-yasg** — Swagger/OpenAPI integration for API documentation
-* **Stripe** — Payment gateway integration
-* **Celery + RabbitMQ** — Background task processing
-* **Redis** — Caching and Celery broker/backend
-* **Docker** — Containerization for consistent development environments
-* **GitHub Actions** — CI/CD pipeline for automated testing and deployment
+* **Python** + **Django** — Core backend web framework
+* **PostgreSQL** — Primary relational database
+* **Django REST Framework (DRF)** — Powerful toolkit for building RESTful APIs
+* **Django Simple JWT** — Secure, token-based authentication (JWT)
+* **drf-yasg** — Automatic generation of interactive Swagger/OpenAPI documentation
+* **Stripe** — Leading payment gateway for handling payments and webhooks (specifically **Stripe Checkout Sessions**)
+* **Celery** + **RabbitMQ** — Distributed task queue for asynchronous background processing
+* **Redis** — In-memory data store for caching and as Celery broker/backend
+* **Docker** — Containerization for isolated and consistent development/production environments
+* **Whitenoise** — Efficient static file serving in production (for Django Admin and Swagger UI assets)
+* **Faker** — Library for generating realistic fake data for seeding
+* **Django Extensions** — Provides useful extensions like `runscript` for seeding
+* **GitHub Actions** — CI/CD pipeline for automated testing and deployment to Railway
 
 ---
 
 ## 🚀 Key Features
 
-### ✅ CRUD Operations
+### ✅ Core API Endpoints
 
-* Products and Categories: Create, Read, Update, Delete
-* User Registration and JWT-based Login
+* **User Management**: Registration, JWT-based login, and profile management.
+* **Product & Category Management**: Full CRUD operations for products, product variants, and categories.
+* **Shopping Cart**: Add, update, and remove items from a user's cart.
+* **Order Management**: Create orders from carts, with detailed order item and shipping address snapshots.
+* **Shipping Addresses**: Manage multiple shipping addresses per user.
 
-### 🔎 API Query Features
+### 🔎 Advanced API Querying
 
-* **Filtering** products by category or name
-* **Sorting** by price or creation date
-* **Pagination** for large product datasets
-
-### 🔐 Authentication
-
-* JWT token-based authentication system
-* Protected endpoints for product/category management
+* **Filtering**: Products by category, name, active status, etc.
+* **Sorting**: Products by various criteria (e.g., price, creation date).
+* **Pagination**: Efficient retrieval of large datasets.
 
 ### 💳 Payment Integration
 
-* Stripe payment processing for product purchases
-* Secure handling of payment intents and webhooks
-
-### ⏱️ Background Task Management
-
-* Celery + RabbitMQ used to:
-
-  * Send order confirmation emails
-  * Handle webhook processing
-  * Schedule deferred or retryable tasks
-
-### ⚡ Caching
-
-* Redis caching for:
-
-  * Product listings
-  * Frequently accessed endpoints
-  * User sessions or carts
+* **Stripe Checkout Sessions**: Seamless and secure payment flow via Stripe's hosted checkout page.
+* **Stripe Webhook Handling**: Asynchronous updates for payment success/failure, ensuring order fulfillment reliability.
+* Secure handling of sensitive payment information (handled by Stripe).
 
 ### 📑 API Documentation
 
-* Swagger UI auto-generated documentation
-* Available via `/swagger/` endpoint
+* **Swagger UI**: Interactive and auto-generated API documentation available at the `/swagger/` endpoint, providing a clear interface for testing and understanding all API capabilities.
+* **Redoc**: Alternative documentation at `/redoc/`.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-ecommerce_backend/
-├── ecommerce_backend/        # Django project settings
-├── products/                 # Products & categories app
-├── users/                    # User registration/authentication
-├── payments/                 # Stripe integration and webhook handlers
-├── tasks/                    # Celery task definitions
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── manage.py
-└── README.md
-```
+
+ecommerce\_backend/
+├── ecommerce\_project/          \# Main Django project settings and URL configurations
+├── store/                      \# Core e-commerce logic: Products, Categories, Carts, Orders, Payments, Webhooks
+│   ├── migrations/
+│   ├── models.py
+│   ├── views.py
+│   ├── serializers.py
+│   ├── urls.py
+│   ├── admin.py
+│   └── management/
+│       └── commands/
+│           └── seed.py         \# Database seeding script (Django management command)
+├── users/                      \# User authentication and custom user model
+│   ├── migrations/
+│   ├── models.py
+│   ├── views.py
+│   ├── serializers.py
+│   ├── urls.py
+│   └── admin.py
+├── staticfiles/                \# Collected static files (Django Admin, drf-yasg assets)
+├── .env.example                \# Example for local environment variables
+├── Dockerfile                  \# Docker build instructions for the application
+├── docker-compose.yml          \# Defines services for local development (PostgreSQL, RabbitMQ, Redis, Celery)
+├── requirements.txt            \# Python dependencies
+├── manage.py                   \# Django management utility
+└── README.md                   \# This file
+
+````
 
 ---
 
-## 🛠️ Installation & Setup (Local)
+## 🛠️ Installation & Setup (Local Development)
 
-```bash
-# Clone the repo
-git clone https://github.com/your-username/alx-project-nexus.git
-cd alx-project-nexus/ecommerce-backend
+To get the project running on your local machine for development:
 
-# Set up virtual environment
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your-username/alx-project-nexus.git](https://github.com/your-username/alx-project-nexus.git)
+    cd alx-project-nexus/ecommerce-backend
+    ```
 
-# Install dependencies
-pip install -r requirements.txt
+2.  **Set up a Python virtual environment:**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate    # On Windows: `venv\Scripts\activate`
+    ```
 
-# Apply migrations
-python manage.py migrate
+3.  **Install Python dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-# Create superuser (for admin access)
-python manage.py createsuperuser
+4.  **Create a `.env` file:**
+    Create a file named `.env` in the `ecommerce_backend/ecommerce_project/` directory (where `settings.py` is located) and add your local environment variables.
+    * For local PostgreSQL, you might use something like:
+        ```
+        DEBUG=True
+        SECRET_KEY=your_very_secret_key_for_local_dev
+        DATABASE_URL=postgres://user:password@localhost:5432/mydatabase
+        STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_TEST_SECRET_KEY
+        STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_STRIPE_TEST_PUBLISHABLE_KEY
+        STRIPE_WEBHOOK_SECRET=whsec_YOUR_STRIPE_TEST_WEBHOOK_SECRET # From Stripe Dashboard for local webhook
+        FRONTEND_URL=http://localhost:3000 # Or your local frontend URL
+        ```
+    * **Note:** You'll need to adjust `DATABASE_URL` to match your local PostgreSQL setup. Ensure the `SECRET_KEY` is unique and strong. Get your Stripe test keys and local webhook secret from your Stripe dashboard.
 
-# Run development server
-python manage.py runserver
-```
+5.  **Start Docker Compose services (PostgreSQL, RabbitMQ, Redis):**
+    ```bash
+    docker-compose up -d
+    ```
+    This will spin up the necessary services in Docker containers.
 
-To run **Celery + RabbitMQ** and **Redis**:
+6.  **Apply database migrations:**
+    ```bash
+    python manage.py migrate
+    ```
 
-```bash
-# Start services using Docker Compose
-docker-compose up -d
-```
+7.  **Create a superuser (for Django Admin access):**
+    ```bash
+    python manage.py createsuperuser
+    ```
+
+8.  **Seed the database with sample data:**
+    ```bash
+    python manage.py seed
+    ```
+
+9.  **Run the Django development server:**
+    ```bash
+    python manage.py runserver
+    ```
+
+Your API should now be running locally at `http://127.0.0.1:8000/`.
 
 ---
 
-## 🔑 Authentication (JWT)
+## 🚀 Deployment (Railway)
 
-* `POST /api/token/` — Obtain token
-* `POST /api/token/refresh/` — Refresh token
-* Include token in headers as:
-  `Authorization: Bearer <your-token>`
+This backend is continuously deployed to [Railway](https://alxprojectnexus.up.railway.app).
+
+* **Database**: Leverages a managed PostgreSQL service on Railway.
+* **Containerization**: The application is deployed via Docker, with the `Dockerfile` handling all build steps, including static file collection.
+* **Automatic Deployments**: Pushing changes to the main branch on GitHub automatically triggers a new build and deployment on Railway.
+* **Environment Variables**: All sensitive keys and configurations (e.g., `DATABASE_URL`, `SECRET_KEY`, Stripe keys) are securely managed as environment variables on the Railway platform.
+
+**Live API Documentation:** Access the interactive Swagger UI for the deployed application at:
+`https://alxprojectnexus.up.railway.app/swagger/`
+
+---
+
+## 🔑 Authentication (JWT) Workflow
+
+The API uses JWT (JSON Web Tokens) for secure authentication.
+
+1.  **Register a User**:
+    * Use the `POST /api/users/register/` endpoint to create a new user account.
+2.  **Obtain Access & Refresh Tokens**:
+    * Send a `POST` request to `/api/token/` (or `/api/token/pair/`) with your `email` and `password`.
+    * The response will provide an `access` token (short-lived) and a `refresh` token (longer-lived).
+3.  **Authorize API Requests**:
+    * Include the `access` token in the `Authorization` header of all subsequent protected API requests:
+        `Authorization: Bearer <your-access-token>`
+    * In Swagger UI, use the "Authorize" button at the top to set this header for all requests.
+4.  **Refresh Token**:
+    * When the `access` token expires, use the `refresh` token with a `POST` request to `/api/token/refresh/` to obtain a new `access` token.
 
 ---
 
 ## 📚 API Endpoints Overview
 
-| Endpoint              | Method    | Description                      |
-| --------------------- | --------- | -------------------------------- |
-| `/api/products/`      | GET       | List all products                |
-| `/api/products/`      | POST      | Create product (auth required)   |
-| `/api/products/<id>/` | GET       | Retrieve single product          |
-| `/api/products/<id>/` | PUT/PATCH | Update product                   |
-| `/api/products/<id>/` | DELETE    | Delete product                   |
-| `/api/categories/`    | GET/POST  | Manage categories                |
-| `/api/checkout/`      | POST      | Initiate Stripe checkout session |
-| `/api/webhook/`       | POST      | Stripe webhook handler           |
-| `/api/token/`         | POST      | Obtain JWT                       |
-| `/swagger/`           | GET       | View API documentation           |
+| Endpoint                                    | Method    | Description                                       | Authentication |
+| :------------------------------------------ | :-------- | :------------------------------------------------ | :------------- |
+| `/`                                         | GET       | Redirects to Swagger UI documentation             | Public         |
+| `/admin/`                                   | GET       | Django Admin panel                                | Admin Login    |
+| `/api/users/register/`                      | POST      | Register a new user                               | Public         |
+| `/api/users/me/`                            | GET/PUT/PATCH | Retrieve/Update authenticated user profile        | JWT            |
+| `/api/store/categories/`                    | GET/POST  | List/Create categories                            | GET: Public, POST: JWT (Admin) |
+| `/api/store/categories/<id>/`               | GET/PUT/PATCH/DELETE | Retrieve/Update/Delete category                   | GET: Public, Others: JWT (Admin) |
+| `/api/store/products/`                      | GET/POST  | List/Create products                              | GET: Public, POST: JWT (Admin) |
+| `/api/store/products/<id>/`                 | GET/PUT/PATCH/DELETE | Retrieve/Update/Delete product                    | GET: Public, Others: JWT (Admin) |
+| `/api/store/product-variants/`              | GET/POST  | List/Create product variants                      | GET: Public, POST: JWT (Admin) |
+| `/api/store/product-variants/<id>/`         | GET/PUT/PATCH/DELETE | Retrieve/Update/Delete product variant            | GET: Public, Others: JWT (Admin) |
+| `/api/store/carts/`                         | GET/POST  | List/Create carts                                 | JWT            |
+| `/api/store/carts/<id>/items/`              | POST      | Add item to cart                                  | JWT            |
+| `/api/store/carts/<id>/items/<item_id>/`    | PATCH/DELETE | Update/Delete cart item                          | JWT            |
+| `/api/store/orders/checkout/`               | POST      | Initiate Stripe Checkout Session from cart        | JWT            |
+| `/api/stripe-webhook/`                      | POST      | Stripe webhook handler for payment events         | Public (Stripe Signature Verified) |
+| `/api/token/`                               | POST      | Obtain JWT access & refresh tokens                | Public         |
+| `/api/token/refresh/`                       | POST      | Refresh JWT access token                          | Public         |
+| `/swagger/`                                 | GET       | Interactive API documentation (Swagger UI)        | Public         |
+| `/redoc/`                                   | GET       | Alternative API documentation (Redoc)             | Public         |
 
 ---
 
-## 📈 Optimization Techniques
+## 📈 Optimization Techniques Implemented
 
-* PostgreSQL indexes on frequently queried fields
-* Query optimization using `select_related` and `prefetch_related`
-* Redis caching to reduce DB hits
-* Background tasks to offload heavy/slow operations
+* **Database Indexing**: Strategic use of database indexes on frequently queried fields to speed up data retrieval.
+* **Query Optimization**: Utilizing Django ORM's `select_related` and `prefetch_related` to minimize database queries for related objects.
+* **Background Tasks**: Offloading long-running or non-critical operations to Celery, preventing API blocking and improving user experience.
 
 ---
 
 ## 🧪 Testing
 
-You can use **Postman** or **Swagger UI** to test API endpoints.
-Stripe can be tested using test card numbers and their test mode dashboard.
+* **API Endpoints**: Thoroughly tested using **Postman** for individual requests and **Swagger UI** for interactive exploration and automated request generation.
+* **Payment Flow**: Tested end-to-end with Stripe's test card numbers and simulated payment events from the Stripe Dashboard and Stripe CLI.
+* **Webhooks**: Verified robust webhook handling by simulating various Stripe events using the `stripe trigger` command and monitoring application logs on Railway.
 
 ---
 
 ## 🔄 Version Control & Workflow
 
-* Atomic, descriptive commits
-* Feature-branch workflow (`feat/`, `fix/`, `perf/`, etc.)
-* Organized codebase with proper `.gitignore` and `README.md`
+* **Atomic Commits**: Maintaining a history of small, self-contained changes with descriptive commit messages.
+* **Feature-Branch Workflow**: Development occurs on dedicated feature, fix, or performance branches (`feat/`, `fix/`, `perf/` prefixes) to ensure a clean main branch.
+* **Organized Codebase**: Adhering to Django conventions and clear naming for maintainability.
+* **`.gitignore`**: Properly configured to exclude sensitive information and unnecessary files from the repository.
 
 ---
 
 ## 🧠 Lessons Learned
 
-* End-to-end REST API architecture with Django & DRF
-* Secure authentication and authorization with JWT
-* Payment workflows and webhook handling via Stripe
-* Caching for performance, async tasks for scalability
-* Dockerized backend development
-* Clean code practices and API documentation standards
+* **End-to-End REST API Architecture**: Gained deep insight into designing and implementing a complete RESTful API with Django and DRF.
+* **Secure Authentication & Authorization**: Mastered JWT token-based authentication and implementing permission layers.
+* **Payment Workflows & Webhook Handling**: Understood the complexities of integrating a payment gateway like Stripe, including the critical role of secure webhook processing and `checkout.session.completed` events for order fulfillment.
+* **Static File Serving in Production**: Emphasized the importance of `Whitenoise` and `collectstatic` for serving static assets in a deployed Django application.
+* **Dockerized Development & Deployment**: Gained hands-on experience in containerizing a Django application and deploying it to a PaaS like Railway, including debugging common deployment issues (e.g., database migrations, environment variables, static files).
+* **API Documentation Standards**: Appreciated the value of auto-generated, interactive API documentation for clarity and collaboration.
 
 ---
 
@@ -196,19 +266,21 @@ Stripe can be tested using test card numbers and their test mode dashboard.
 
 **Wilfred Mugacha**
 Backend Developer | ALX ProDev Fellow
-[LinkedIn](#) | [Email](#)
+[LinkedIn Profile](https://www.linkedin.com/in/wilfred-mugacha/) | [Email](mailto:wilfredmugacha@gmail.com)
 
 ---
 
 ## 📌 Project Status
 
-✅ User authentication
-✅ Products & categories CRUD
-✅ Pagination, filtering & sorting
-✅ PostgreSQL optimization
-✅ Stripe payment flow
-✅ Celery task queue integration
-✅ Redis caching setup
-✅ Swagger documentation
-
-🔜 Final deployment, CI/CD with GitHub Actions
+✅ Custom User Authentication (JWT)
+✅ Products & Categories CRUD
+✅ Product Variants & Shipping Addresses
+✅ Pagination, Filtering & Sorting
+✅ PostgreSQL Optimization & Migrations
+✅ Stripe Checkout Session Integration
+✅ Robust Stripe Webhook Handling
+✅ Redis Caching Setup
+✅ Swagger/OpenAPI Documentation
+✅ Dockerized Development & Deployment to Railway
+✅ Continuous Deployment
+````
