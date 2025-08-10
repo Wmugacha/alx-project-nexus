@@ -155,10 +155,10 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = [
             'id', 'order', 'payment_method', 'amount', 'status',
-            'currency', 'transaction_id', 'payment_gateway_response',
+            'currency', 'stripe_session_id', 'payment_gateway_response',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'status', 'transaction_id', 'payment_gateway_response']
+        read_only_fields = ['created_at', 'updated_at', 'status', 'stripe_session_id', 'payment_gateway_response']
         extra_kwargs = {
             'order': {'write_only': True}
         }

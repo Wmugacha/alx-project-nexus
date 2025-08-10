@@ -206,3 +206,4 @@ SWAGGER_SETTINGS = {
     }
 }
 
+FRONTEND_URL = "https://alxprojectnexus.up.railway.app"

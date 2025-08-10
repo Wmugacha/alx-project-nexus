@@ -9,11 +9,12 @@ from django.shortcuts import get_object_or_404
 from decimal import Decimal
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser
 import stripe
 import json
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 from .models import (
     Category, Product, ProductImage, ProductVariant,
@@ -133,8 +134,10 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='checkout')
     def checkout(self, request):
         """
-        Action to convert the user's active cart into an Order.
+        Action to convert the user's active cart into an Order,
+        create an associated Payment record, and initiate a Stripe Checkout Session.
         Expects 'cart_id' and 'shipping_address_id' in the request data.
+        Returns the Stripe Checkout Session URL for client redirection.
         """
         user = request.user
         cart_id = request.data.get('cart_id')
@@ -177,15 +180,17 @@ class OrderViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-            # Create Order
+            # 3. Create Order
+            # Initial status is 'pending' before payment confirmation
             order = Order.objects.create(
                 user=user,
                 cart=cart,
                 status='pending',
-                total_price=Decimal('0.00') # Will be updated by signal
+                total_price=Decimal('0.00') # Will be updated by signal (OrderItem post_save)
             )
 
-            # Create OrderItems from CartItems and update stock
+            # 4. Create OrderItems from CartItems and prepare Stripe line_items
+            line_items_for_stripe = []
             for cart_item in cart_items:
                 OrderItem.objects.create(
                     order=order,
@@ -197,7 +202,24 @@ class OrderViewSet(viewsets.ModelViewSet):
                 )
                 # Stock reduction is handled by signals (OrderItem post_save)
 
-            # Create OrderShippingAddress snapshot
+                # Stripe expects unit_amount in cents/smallest currency unit
+                # Ensure cart_item.product_variant.price is Decimal for accurate multiplication
+                unit_amount_cents = int(cart_item.product_variant.price * 100)
+
+                line_items_for_stripe.append({
+                    'price_data': {
+                        'currency': 'usd', # IMPORTANT: Use your actual currency (e.g., 'usd', 'eur', 'etb')
+                        'product_data': {
+                            'name': cart_item.product_variant.product.title,
+                            'description': f"SKU: {cart_item.product_variant.sku}, Size: {cart_item.product_variant.size}, Color: {cart_item.product_variant.color}",
+                            # 'images': [cart_item.product_variant.product.image.url] # Add if you have product images
+                        },
+                        'unit_amount': unit_amount_cents,
+                    },
+                    'quantity': cart_item.quantity,
+                })
+
+            # 5. Create OrderShippingAddress snapshot
             OrderShippingAddress.objects.create(
                 order=order,
                 full_name=shipping_address.full_name,
@@ -215,8 +237,74 @@ class OrderViewSet(viewsets.ModelViewSet):
             # Reload order to get updated total_price from signal
             order.refresh_from_db()
 
-            serializer = self.get_serializer(order)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # 6. Create a Payment record *before* initiating Stripe session
+            # This payment record will be updated by webhooks
+            payment = Payment.objects.create(
+                order=order,
+                amount=order.total_price, # Use the actual order total
+                payment_method='stripe_checkout', # Indicate method used
+                status='requires_action' # Initial status for the payment flow
+            )
+
+            print(f"DEBUG: Preparing Stripe Checkout Session for Order ID: {order.id}, Payment ID: {payment.id}")
+            print(f"DEBUG: Line Items being sent to Stripe: {line_items_for_stripe}")
+            print(f"DEBUG: Metadata being sent to Stripe: {{'order_id': str(order.id), 'user_id': str(user.id), 'cart_id': str(cart.id), 'payment_id': str(payment.id)}}")
+            try:
+                # 7. Create Stripe Checkout Session
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'], # Or include other types you've enabled in Stripe Dashboard
+                    line_items=line_items_for_stripe,
+                    mode='payment',
+                    # Crucial URLs for redirection after payment
+                    success_url=f"{settings.FRONTEND_URL}/order-success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{settings.FRONTEND_URL}/cart",
+                    customer_email=user.email, # Pre-fill customer email on Stripe page
+                    metadata={ # Pass your internal IDs for webhook reconciliation
+                        'order_id': str(order.id),
+                        'user_id': str(user.id),
+                        'cart_id': str(cart.id),
+                        'payment_id': str(payment.id), # Pass internal payment ID for webhook
+                    },
+                )
+
+                # 8. Update the order and payment with the Checkout Session ID
+                order.stripe_checkout_session_id = checkout_session.id
+                order.save()
+
+                payment.stripe_session_id = checkout_session.id # Link payment to Stripe Session
+                payment.save()
+
+                return Response(
+                    {
+                        "checkout_url": checkout_session.url, # URL to redirect frontend
+                        "order_id": order.id,
+                        "session_id": checkout_session.id,
+                        "payment_id": payment.id # Return your internal payment ID
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            except stripe.error.StripeError as e:
+                # If Stripe API call fails, mark order/payment as failed
+                order.status = 'payment_failed'
+                order.save()
+                payment.status = 'failed'
+                payment.save()
+                return Response(
+                    {"detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                # Catch any other unexpected errors
+                order.status = 'payment_failed'
+                order.save()
+                payment.status = 'failed'
+                payment.save()
+                print(f"Checkout error: {e}") # Log for debugging
+                return Response(
+                    {"detail": "An unexpected error occurred during checkout."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):
@@ -228,18 +316,12 @@ class OrderItemViewSet(viewsets.ModelViewSet):
             return OrderItem.objects.none()
         return OrderItem.objects.filter(order__user=self.request.user)
 
-
-class OrderShippingAddressViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderShippingAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return OrderShippingAddress.objects.none()
-        return OrderShippingAddress.objects.filter(order__user=self.request.user)
-
-
 class PaymentViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for retrieving Payment records.
+    The creation of Payment records is now handled by OrderViewSet.checkout,
+    and their status updates are handled by the Stripe webhook.
+    """
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -249,95 +331,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return Payment.objects.filter(order__user=self.request.user)
 
 
-    @action(detail=False, methods=['post'], url_path='initiate')
-    def initiate_payment(self, request):
-        """
-        Initiates a payment by creating a Stripe PaymentIntent.
-        Expects 'order_id' and 'payment_method' ('card') in request data.
-        """
-        user = request.user
-        order_id = request.data.get('order_id')
-        payment_method = request.data.get('payment_method', 'card')
-
-        if not order_id:
-            return Response(
-                {"detail": "Order ID is required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            order = get_object_or_404(Order, id=order_id, user=user)
-        except Order.DoesNotExist:
-            return Response(
-                {"detail": "Order not found or does not belong to user."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Prevent initiating payment for already paid/processed orders
-        if order.status in ['paid', 'processing']:
-             return Response(
-                {"detail": "Order has already been paid or is being processed."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Ensure order has a total price
-        if order.total_price <= 0:
-            return Response(
-                {"detail": "Order total must be greater than zero."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        with transaction.atomic():
-            # Create a Payment record with 'requires_action' status initially
-            # This payment record will be updated by webhooks
-            payment = Payment.objects.create(
-                order=order,
-                amount=order.total_price, # Use the actual order total
-                payment_method=payment_method,
-                status='requires_action' # Initial status for PaymentIntent flow
-            )
-
-            try:
-                # Create a Stripe PaymentIntent
-                # amount needs to be in cents (or smallest currency unit)
-                payment_intent = stripe.PaymentIntent.create(
-                    amount=int(order.total_price * 100),
-                    currency="usd", # Or your desired currency
-                    payment_method_types=[payment_method],
-                    metadata={'order_id': str(order.id), 'payment_id': str(payment.id)}
-                )
-
-                # Update Payment record with PaymentIntent ID
-                payment.stripe_payment_intent_id = payment_intent.id
-                payment.save()
-
-                return Response(
-                    {
-                        "detail": "Payment intent created successfully.",
-                        "client_secret": payment_intent.client_secret,
-                        "payment_id": payment.id, # Return your internal payment ID
-                        "order_id": order.id
-                    },
-                    status=status.HTTP_200_OK
-                )
-
-            except stripe.error.StripeError as e:
-                # Handle Stripe API errors
-                payment.status = 'failed'
-                payment.save()
-                return Response(
-                    {"detail": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            except Exception as e:
-                # Handle other unexpected errors
-                payment.status = 'failed'
-                payment.save()
-                return Response(
-                    {"detail": "An unexpected error occurred during payment initiation."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
@@ -346,20 +339,16 @@ def stripe_webhook(request):
 
     try:
         # 1. Verify Webhook Signature (CRITICAL SECURITY STEP)
-        # This protects against fake webhook calls by verifying the payload with your secret
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
     except ValueError as e:
-        # Invalid payload
         print(f"Webhook Error: Invalid payload: {e}")
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
         print(f"Webhook Error: Invalid signature: {e}")
         return HttpResponse(status=400)
     except Exception as e:
-        # Catch any other unexpected errors during event construction
         print(f"Webhook Error: Unexpected error during event construction: {e}")
         return HttpResponse(status=400)
 
@@ -370,8 +359,47 @@ def stripe_webhook(request):
     print(f"Received Stripe event: {event_type}") # For debugging
 
     with transaction.atomic():
-        if event_type == 'payment_intent.succeeded':
-            # A payment was successfully captured
+        if event_type == 'checkout.session.completed':
+            # This is the primary event for order fulfillment when using Stripe Checkout Sessions.
+            session_id = event_data['id']
+            # Retrieve your internal order_id and payment_id from metadata
+            order_id = event_data['metadata'].get('order_id')
+            payment_id = event_data['metadata'].get('payment_id') # Get internal payment ID
+
+            print(f"Stripe Checkout Session {session_id} completed. Internal Order ID: {order_id}, Payment ID: {payment_id}")
+
+            try:
+                # Retrieve the pre-created Payment record and update its status
+                payment = Payment.objects.get(id=payment_id, order__id=order_id)
+                payment.status = 'succeeded'
+                payment.stripe_payment_intent_id = event_data['payment_intent'] # Link to PI created by CS
+                payment.stripe_session_id = session_id # Ensure this is also saved if needed
+                payment.save()
+
+                # Update the associated Order status
+                order = payment.order
+                order.status = 'paid'
+                order.stripe_checkout_session_id = session_id # Link order to Checkout Session
+                order.save()
+                
+                # Optional: Mark cart as checked out if not already handled by a signal
+                # order.cart.checked_out = True
+                # order.cart.save()
+
+                print(f"Order {order_id} status updated to 'paid' and Payment {payment_id} marked as succeeded.")
+            except Payment.DoesNotExist:
+                print(f"Error: Payment record with ID {payment_id} for Order {order_id} not found for Checkout Session {session_id}.")
+                return HttpResponse(status=200) # Always return 200 OK to Stripe
+            except Order.DoesNotExist: # Should ideally not happen if Payment exists and links to Order
+                print(f"Error: Order with ID {order_id} not found during webhook processing for session {session_id}.")
+                return HttpResponse(status=200)
+            except Exception as e:
+                print(f"Error processing checkout.session.completed for order {order_id}, payment {payment_id}: {e}")
+                return HttpResponse(status=200)
+
+        elif event_type == 'payment_intent.succeeded':
+            # This handler is for direct PaymentIntent flows.(Earlier implementation)
+            # This part handles PaymentIntents directly, outside of Checkout Sessions.
             payment_intent_id = event_data['id']
             try:
                 payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
@@ -379,16 +407,15 @@ def stripe_webhook(request):
                 payment.save()
 
                 order = payment.order
-                order.status = 'paid' # Update order status to 'paid'
+                order.status = 'paid'
                 order.save()
                 print(f"PaymentIntent {payment_intent_id} succeeded. Order {order.id} status updated to 'paid'.")
             except Payment.DoesNotExist:
                 print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
-                # It's generally safe to return 200 even if not found, to prevent Stripe retrying
                 return HttpResponse(status=200) 
 
         elif event_type == 'payment_intent.payment_failed':
-            # A payment failed
+            # This handler is also for direct PaymentIntent flows.
             payment_intent_id = event_data['id']
             try:
                 payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
@@ -396,14 +423,15 @@ def stripe_webhook(request):
                 payment.save()
 
                 order = payment.order
-                order.status = 'payment_failed' # Update order status to 'payment_failed'
+                order.status = 'payment_failed'
                 order.save()
                 print(f"PaymentIntent {payment_intent_id} failed. Order {order.id} status updated to 'payment_failed'.")
             except Payment.DoesNotExist:
                 print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
                 return HttpResponse(status=200)
 
-        # Future: add more events to Handle refunds
+        # You can add more event handlers here for other Stripe events if needed
+        # e.g., 'charge.refunded', 'invoice.paid', etc.
 
     return HttpResponse(status=200)
 
@@ -416,6 +444,15 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return ShippingAddress.objects.none()
         return ShippingAddress.objects.filter(user=self.request.user)
+
+class OrderShippingAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderShippingAddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return OrderShippingAddress.objects.none()
+        return OrderShippingAddress.objects.filter(order__user=self.request.user)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -436,3 +473,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
             return queryset
         else:
             return queryset.filter(is_approved=True)
+
+# These simple functions are for your frontend redirection after Stripe checkout
+# They are not part of the DRF ViewSet. Ensure they are mapped in your urls.py.
+def payment_success(request):
+    # This view would typically load a frontend template showing success or redirect to a SPA route
+    return HttpResponse("<h1>Payment Successful! 🎉 Your order is being processed.</h1>")
+
+def payment_cancelled(request):
+    # This view would typically load a frontend template showing cancellation or redirect to a SPA route
+    return HttpResponse("<h1>Payment Cancelled 😔</h1><p>You can try again or check your cart.</p>")
+

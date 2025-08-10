@@ -184,8 +184,8 @@ class Payment(models.Model):
         default='pending'
     )
     currency = models.CharField(max_length=3, default='USD')
-    transaction_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
-    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_session_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     payment_gateway_response = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
