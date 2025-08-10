@@ -250,16 +250,16 @@ class OrderViewSet(viewsets.ModelViewSet):
             print(f"DEBUG: Line Items being sent to Stripe: {line_items_for_stripe}")
             print(f"DEBUG: Metadata being sent to Stripe: {{'order_id': str(order.id), 'user_id': str(user.id), 'cart_id': str(cart.id), 'payment_id': str(payment.id)}}")
             try:
-                # 7. Create Stripe Checkout Session
+                # Stripe Checkout Session
                 checkout_session = stripe.checkout.Session.create(
-                    payment_method_types=['card'], # Or include other types you've enabled in Stripe Dashboard
+                    payment_method_types=['card'],
                     line_items=line_items_for_stripe,
                     mode='payment',
-                    # Crucial URLs for redirection after payment
-                    success_url=f"{settings.FRONTEND_URL}/order-success?session_id={{CHECKOUT_SESSION_ID}}",
-                    cancel_url=f"{settings.FRONTEND_URL}/cart",
+                    # URLs for redirection after payment
+                    success_url=f"{settings.FRONTEND_URL}/payment-success/?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{settings.FRONTEND_URL}/payment-cancelled/",
                     customer_email=user.email, # Pre-fill customer email on Stripe page
-                    metadata={ # Pass your internal IDs for webhook reconciliation
+                    metadata={ # Pass internal IDs for webhook reconciliation
                         'order_id': str(order.id),
                         'user_id': str(user.id),
                         'cart_id': str(cart.id),
@@ -300,7 +300,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.save()
                 payment.status = 'failed'
                 payment.save()
-                print(f"Checkout error: {e}") # Log for debugging
+                print(f"Checkout error: {e}")
                 return Response(
                     {"detail": "An unexpected error occurred during checkout."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -474,11 +474,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(is_approved=True)
 
-# These simple functions are for your frontend redirection after Stripe checkout
-# They are not part of the DRF ViewSet. Ensure they are mapped in your urls.py.
+# For redirection after Stripe checkout
 def payment_success(request):
     # This view would typically load a frontend template showing success or redirect to a SPA route
-    return HttpResponse("<h1>Payment Successful! 🎉 Your order is being processed.</h1>")
+    return HttpResponse("<h1>Payment Successful! Your order is being processed.</h1>")
 
 def payment_cancelled(request):
     # This view would typically load a frontend template showing cancellation or redirect to a SPA route
