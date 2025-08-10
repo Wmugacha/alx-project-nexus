@@ -44,7 +44,7 @@ if DEBUG: # Allow all hosts in debug mode for convenience
 else: # If not debug, ensure localhost/127.0.0.1 are also in allowed_hosts if needed for health checks
     ALLOWED_HOSTS.append('localhost')
     ALLOWED_HOSTS.append('127.0.0.1')
-    ALLOWED_HOSTS.append('alxprojectnexus.up.railway.app',)
+    ALLOWED_HOSTS.append('alxprojectnexus.up.railway.app')
 #ALLOWED_HOSTS = []
 
 
