@@ -38,20 +38,6 @@ stripe.api_key = STRIPE_SECRET_KEY
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = [
-        'localhost',
-        '127.0.0.1',
-        'alxprojectnexus.up.railway.app',
-    ]
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://alxprojectnexus.up.railway.app',
-]
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -70,11 +56,13 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'django_extensions',
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -211,4 +199,38 @@ SWAGGER_SETTINGS = {
     }
 }
 
-FRONTEND_URL = "https://alxprojectnexus.up.railway.app"
+
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+    CORS_ALLOWED_ORIGINS = [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+    FRONTEND_URL = "http://127.0.0.1:8000"
+else:
+    ALLOWED_HOSTS = [
+        "alxprojectnexus.up.railway.app",
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        "https://alxprojectnexus.up.railway.app",
+    ]
+    CORS_ALLOWED_ORIGINS = [
+        "https://alxprojectnexus.up.railway.app",
+    ]
+    FRONTEND_URL = "https://alxprojectnexus.up.railway.app"
+
+# Celery Configuration
+# CELERY_BROKER_URL: points to the RabbitMQ service name defined in docker-compose.yml
+CELERY_BROKER_URL = os.environ.get("RABBITMQ_URL", 'amqp://guest:guest@rabbitmq:5672/')
+
+# CELERY_RESULT_BACKEND: points to the Redis service name
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", 'redis://redis:6379/0')
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'

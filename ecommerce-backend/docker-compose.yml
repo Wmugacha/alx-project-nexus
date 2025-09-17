@@ -27,6 +27,53 @@ services:
       - .env
     depends_on:
       - db
+      - rabbitmq
+      - redis
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # The default RabbitMQ port
+      - "15672:15672" # The web management UI port (useful for debugging)
+    # To prevent the web service from starting before the broker is ready
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 15s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379" # Default Redis port
+    volumes:
+      - redis_data:/data
+
+  celery_worker:
+    build: .
+    container_name: celery_worker
+    command: celery -A ecommerce_project worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file: .env
+    depends_on:
+      - rabbitmq
+      - redis # Workers depend on the broker and result backend
+
+  flower:
+    image: mher/flower
+    container_name: celery_flower
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_FLOWER_URL=http://0.0.0.0:5555
+    ports:
+      - "5555:5555" # Exposes the Flower dashboard on port 5555
+    depends_on:
+      - rabbitmq
+      - celery_worker
 
 volumes:
   postgres_data:
+  redis_data:

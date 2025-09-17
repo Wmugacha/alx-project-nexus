@@ -1,6 +1,12 @@
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from django.conf import settings
+
+if settings.DEBUG:
+    swagger_url = "http://127.0.0.1:8000"  # local dev
+else:
+    swagger_url = "https://alxprojectnexus.up.railway.app"  # Deployed
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -42,7 +48,7 @@ schema_view = get_schema_view(
         contact=openapi.Contact(email="wilfredmugacha@gmail.com"),
         license=openapi.License(name="BSD License"),
     ),
-    url='https://alxprojectnexus.up.railway.app',
+    url=swagger_url,
     public=True,
     permission_classes=(permissions.AllowAny,),
 )

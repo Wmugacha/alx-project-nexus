@@ -2,13 +2,14 @@ from rest_framework import viewsets, permissions, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from .pagination import ResultsSetPagination
 from .permissions import IsAdminOrReadOnly, ReviewPermissions
+from .tasks import send_order_confirmation_email_task
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
 from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt 
 from django.conf import settings
 import stripe
 import json
@@ -381,10 +382,11 @@ def stripe_webhook(request):
                 order.status = 'paid'
                 order.stripe_checkout_session_id = session_id # Link order to Checkout Session
                 order.save()
+
+                # Send Order confirmation email
+                send_order_confirmation_email_task.delay(order_id)
                 
-                # Optional: Mark cart as checked out if not already handled by a signal
-                # order.cart.checked_out = True
-                # order.cart.save()
+                print(f"Order {order_id} status updated to 'paid'. Celery task triggered to send email.")
 
                 print(f"Order {order_id} status updated to 'paid' and Payment {payment_id} marked as succeeded.")
             except Payment.DoesNotExist:
@@ -397,41 +399,8 @@ def stripe_webhook(request):
                 print(f"Error processing checkout.session.completed for order {order_id}, payment {payment_id}: {e}")
                 return HttpResponse(status=200)
 
-        elif event_type == 'payment_intent.succeeded':
-            # This handler is for direct PaymentIntent flows.(Earlier implementation)
-            # This part handles PaymentIntents directly, outside of Checkout Sessions.
-            payment_intent_id = event_data['id']
-            try:
-                payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
-                payment.status = 'succeeded'
-                payment.save()
-
-                order = payment.order
-                order.status = 'paid'
-                order.save()
-                print(f"PaymentIntent {payment_intent_id} succeeded. Order {order.id} status updated to 'paid'.")
-            except Payment.DoesNotExist:
-                print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
-                return HttpResponse(status=200) 
-
-        elif event_type == 'payment_intent.payment_failed':
-            # This handler is also for direct PaymentIntent flows.
-            payment_intent_id = event_data['id']
-            try:
-                payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
-                payment.status = 'failed'
-                payment.save()
-
-                order = payment.order
-                order.status = 'payment_failed'
-                order.save()
-                print(f"PaymentIntent {payment_intent_id} failed. Order {order.id} status updated to 'payment_failed'.")
-            except Payment.DoesNotExist:
-                print(f"Error: Payment record for PaymentIntent {payment_intent_id} not found.")
-                return HttpResponse(status=200)
-
-        # You can add more event handlers here for other Stripe events if needed
-        # e.g., 'charge.refunded', 'invoice.paid', etc.
+        # More event handlers for other Stripe events
+        # 'charge.refunded', 'invoice.paid',
 
     return HttpResponse(status=200)
 
