@@ -246,8 +246,8 @@ Interactive API documentation (Swagger UI) |
 
 Wilfred Mugacha
 Backend Developer | ALX ProDev Graduate
-  [LinkedIn](https://www.linkedin.com/in/wilfred-mugacha) | [Email](mailto:wilfredmugacha@gmail.com)
-
+[LinkedIn](https://www.linkedin.com/in/wilfred-mugacha) | [Email](mailto:wilfredmugacha@gmail.com)
+[API Documentation](https://alxprojectnexus.up.railway.app/swagger/)
 ## 📌 Project Status
 
 * ✅ Custom User Authentication (JWT)
