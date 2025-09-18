@@ -17,7 +17,7 @@ def send_order_confirmation_email_task(order_id):
         send_mail(
             subject,
             message,
-            'noreply@yourshop.com',  # Replace with your 'from' address
+            'noreply@yourshop.com',
             [recipient_email],
             fail_silently=False,
         )
