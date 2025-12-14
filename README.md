@@ -246,7 +246,7 @@ Interactive API documentation (Swagger UI) |
 
 Wilfred Mugacha
 Backend Developer | ALX ProDev Graduate
-[LinkedIn](https://www.linkedin.com/in/wilfred-mugacha) | [Email](mailto:wilfredmugacha@gmail.com)
+[LinkedIn](https://www.linkedin.com/in/wilfredmugacha) | [Email](mailto:wilfredmugacha@gmail.com)
 
 ## 📌 Project Status
 
