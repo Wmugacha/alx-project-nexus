@@ -15,6 +15,7 @@ import os
 from datetime import timedelta
 import stripe
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
 
@@ -34,9 +35,6 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
 stripe.api_key = STRIPE_SECRET_KEY
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
 
 # Application definition
 
@@ -95,26 +93,11 @@ WSGI_APPLICATION = 'ecommerce_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DB_LIVE = os.getenv("DB_LIVE")
-
-if DB_LIVE in ["False", False]:
-    DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv("POSTGRES_DB"),
-            'USER': os.getenv("POSTGRES_USER"),
-            'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
-            'HOST': os.getenv("POSTGRES_HOST", "localhost"),
-            'PORT': os.getenv("POSTGRES_PORT", "5432"),
-        }
-    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -199,36 +182,24 @@ SWAGGER_SETTINGS = {
     }
 }
 
+# Pull DEBUG from your .env file (Defaults to False for safety)
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-if DEBUG:
-    ALLOWED_HOSTS = ["*"]
-    CSRF_TRUSTED_ORIGINS = [
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ]
-    CORS_ALLOWED_ORIGINS = [
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ]
-    FRONTEND_URL = "http://127.0.0.1:8000"
-else:
-    ALLOWED_HOSTS = [
-        "alxprojectnexus.up.railway.app",
-    ]
-    CSRF_TRUSTED_ORIGINS = [
-        "https://alxprojectnexus.up.railway.app",
-    ]
-    CORS_ALLOWED_ORIGINS = [
-        "https://alxprojectnexus.up.railway.app",
-    ]
-    FRONTEND_URL = "https://alxprojectnexus.up.railway.app"
+# Dynamically load ALLOWED_HOSTS from .env
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+
+# Dynamically load CORS and CSRF origins
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000').split(',')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 # Celery Configuration
 # CELERY_BROKER_URL: points to the RabbitMQ service name defined in docker-compose.yml
-CELERY_BROKER_URL = os.environ.get("RABBITMQ_URL", 'amqp://guest:guest@rabbitmq:5672/')
+CELERY_BROKER_URL='amqp://guest:guest@rabbitmq_app2:5672//'
 
 # CELERY_RESULT_BACKEND: points to the Redis service name
-CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", 'redis://redis_app2:6379/0')
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
