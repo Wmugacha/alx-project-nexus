@@ -96,7 +96,7 @@ ecommerce\_backend/
 ├── manage.py                     # Django management utility
 └── README.md                     # This file
 
-````
+```
 
 ## 🛠️ Installation & Setup (Local Development)
 
@@ -104,83 +104,84 @@ To get the project running on your local machine for development:
 
 1. Clone the repository:
 
-    ```bash
-    git clone [https://github.com/Wmugacha/alx-project-nexus.git](https://github.com/Wmugacha/alx-project-nexus.git)
-    cd alx-project-nexus/ecommerce-backend
-    ```
+   ```bash
+   git clone [https://github.com/Wmugacha/alx-project-nexus.git](https://github.com/Wmugacha/alx-project-nexus.git)
+   cd alx-project-nexus/ecommerce-backend
+   ```
 
 2. Set up a Python virtual environment:
 
-    ```bash
-    python -m venv venv
-    source venv/bin/activate    # On Windows: `venv\Scripts\activate`
-    ```
+   ```bash
+   python -m venv venv
+   source venv/bin/activate    # On Windows: `venv\Scripts\activate`
+   ```
 
 3. Install Python dependencies:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 4. Create a `.env` file:  
-    Create a file named `.env` in the `ecommerce_backend/ecommerce_project/` directory (where `settings.py` is located) and add your local environment variables.
+   Create a file named `.env` in the `ecommerce_backend/ecommerce_project/` directory (where `settings.py` is located) and add your local environment variables.
 
-    For local PostgreSQL, you might use something like:
+   For local PostgreSQL, you might use something like:
 
-    ```bash
-    DEBUG=True
-    SECRET_KEY=your_very_secret_key_for_local_dev
-    DATABASE_URL=postgres://user:password@localhost:5432/mydatabase
-    STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_TEST_SECRET_KEY
-    STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_STRIPE_TEST_PUBLISHABLE_KEY
-    STRIPE_WEBHOOK_SECRET=whsec_YOUR_STRIPE_TEST_WEBHOOK_SECRET # From Stripe Dashboard for local webhook
-    FRONTEND_URL=http://localhost:3000 # Or your local frontend URL
-    ```
+   ```bash
+   DEBUG=True
+   SECRET_KEY=your_very_secret_key_for_local_dev
+   DATABASE_URL=postgres://user:password@localhost:5432/mydatabase
+   STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_TEST_SECRET_KEY
+   STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_STRIPE_TEST_PUBLISHABLE_KEY
+   STRIPE_WEBHOOK_SECRET=whsec_YOUR_STRIPE_TEST_WEBHOOK_SECRET # From Stripe Dashboard for local webhook
+   FRONTEND_URL=http://localhost:3000 # Or your local frontend URL
+   ```
 
 5. Start Docker Compose services (PostgreSQL, RabbitMQ, Redis):
 
-    ```bash
-    docker compose up --build
-    ```
+   ```bash
+   docker compose up --build
+   ```
 
-    This will spin up the necessary services in Docker containers.
+   This will spin up the necessary services in Docker containers.
 
 6. Apply database migrations:
 
-    ```bash
-    python manage.py migrate
-    ```
+   ```bash
+   python manage.py migrate
+   ```
 
 7. Create a superuser (for Django Admin access):
 
-    ```bash
-    python manage.py createsuperuser
-    ```
+   ```bash
+   python manage.py createsuperuser
+   ```
 
 8. Seed the database with sample data:
 
-    ```bash
-    python manage.py seed
-    ```
+   ```bash
+   python manage.py seed
+   ```
 
 9. Run the Django development server:
 
-    ```bash
-    python manage.py runserver
-    ```
+   ```bash
+   python manage.py runserver
+   ```
 
 Your API should now be running locally at `http://127.0.0.1:8000/`.
 
-## 🚀 Deployment (Railway)
+## 🚀 Deployment (AWS & Supabase)
 
-This backend is continuously deployed to Railway.
+This backend is continuously deployed using an AWS instance and Supabase.
 
-- **Database**: Leverages a managed PostgreSQL service on Railway.
-- **Containerization**: The application is deployed via Docker, with the Dockerfile handling all build steps, including static file collection.
-- **Automatic Deployments**: Pushing changes to the main branch on GitHub automatically triggers a new build and deployment on Railway.
-- **Environment Variables**: All sensitive keys and configurations (DATABASE_URL, SECRET_KEY, Stripe keys) are securely managed as environment variables on the Railway platform.
-- **Live API Documentation**: Access the interactive Swagger UI for the deployed application at:  
-  [API Documentation](https://alxprojectnexus.up.railway.app/swagger/)
+- **Database**: Leverages Supabase for a fully managed, scalable PostgreSQL database.
+- **Containerization & Orchestration**: The application stack (Django Web App, Celery Worker, RabbitMQ, and Redis) is containerized and orchestrated using Docker Compose directly on an AWS instance.
+- **Automatic Deployments**: GitHub Actions CI/CD pipeline automates testing and deployment to the AWS environment.
+- **Environment Variables**: All sensitive keys and configurations (e.g., `DATABASE_URL`, `SECRET_KEY`, Stripe keys) are securely managed on the AWS instance and injected into the containers.
+
+**Live API Documentation:** Access the interactive Swagger UI for the deployed application at:
+[API Documentation](http://51.20.119.5:8002/swagger/)
 
 ## 🔑 Authentication (JWT) Workflow
 
@@ -195,7 +196,7 @@ The API uses JWT (JSON Web Tokens) for secure authentication.
 
 In Swagger UI, use the "Authorize" button at the top to set this header for all requests.
 
-* **Refresh Token**: When the access token expires, use the refresh token with a `POST` request to `/api/token/refresh/` to obtain a new access token.
+- **Refresh Token**: When the access token expires, use the refresh token with a `POST` request to `/api/token/refresh/` to obtain a new access token.
 
 ## 📚 API Endpoints Overview
 
@@ -211,36 +212,35 @@ In Swagger UI, use the "Authorize" button at the top to set this header for all 
 | `/api/stripe-webhook/`   | POST          | Stripe webhook handler for payment events  |
 | `/swagger/`              | GET           |                                            |
 
-
 Interactive API documentation (Swagger UI) |
 
 ## 📈 Optimization Techniques Implemented
 
-* **Database Indexing**: Strategic use of database indexes on frequently queried fields to speed up data retrieval.
-* **Query Optimization**: Utilizing Django ORM's `select_related` and `prefetch_related` to minimize database queries for related objects.
-* **Background Tasks**: Offloading long-running or non-critical operations to Celery, preventing API blocking and improving user experience.
+- **Database Indexing**: Strategic use of database indexes on frequently queried fields to speed up data retrieval.
+- **Query Optimization**: Utilizing Django ORM's `select_related` and `prefetch_related` to minimize database queries for related objects.
+- **Background Tasks**: Offloading long-running or non-critical operations to Celery, preventing API blocking and improving user experience.
 
 ## 🧪 Testing
 
-* **API Endpoints**: Thoroughly tested using Postman for individual requests and Swagger UI for interactive exploration and automated request generation.
-* **Payment Flow**: Tested end-to-end with Stripe's test card numbers and simulated payment events from the Stripe Dashboard and Stripe CLI.
-* **Webhooks**: Verified robust webhook handling by simulating various Stripe events using the `stripe trigger` command and monitoring application logs on Railway.
+- **API Endpoints**: Thoroughly tested using Postman for individual requests and Swagger UI for interactive exploration and automated request generation.
+- **Payment Flow**: Tested end-to-end with Stripe's test card numbers and simulated payment events from the Stripe Dashboard and Stripe CLI.
+- **Webhooks**: Verified robust webhook handling by simulating various Stripe events using the `stripe trigger` command and monitoring application logs on Railway.
 
 ## 🔄 Version Control & Workflow
 
-* **Atomic Commits**: Maintaining a history of small, self-contained changes with descriptive commit messages.
-* **Feature-Branch Workflow**: Development occurs on dedicated feature, fix, or performance branches (feat/, fix/, perf/ prefixes) to ensure a clean main branch.
-* **Organized Codebase**: Adhering to Django conventions and clear naming for maintainability.
-* **.gitignore**: Properly configured to exclude sensitive information and unnecessary files from the repository.
+- **Atomic Commits**: Maintaining a history of small, self-contained changes with descriptive commit messages.
+- **Feature-Branch Workflow**: Development occurs on dedicated feature, fix, or performance branches (feat/, fix/, perf/ prefixes) to ensure a clean main branch.
+- **Organized Codebase**: Adhering to Django conventions and clear naming for maintainability.
+- **.gitignore**: Properly configured to exclude sensitive information and unnecessary files from the repository.
 
 ## 🧠 Lessons Learned
 
-* **End-to-End REST API Architecture**: Gained deep insight into designing and implementing a complete RESTful API with Django and DRF.
-* **Secure Authentication & Authorization**: Mastered JWT token-based authentication and implementing permission layers.
-* **Payment Workflows & Webhook Handling**: Understood the complexities of integrating a payment gateway like Stripe, including the critical role of secure webhook processing and `checkout.session.completed` events for order fulfillment.
-* **Static File Serving in Production**: Emphasized the importance of Whitenoise and `collectstatic` for serving static assets in a deployed Django application.
-* **Dockerized Development & Deployment**: Gained hands-on experience in containerizing a Django application and deploying it to a PaaS like Railway, including debugging common deployment issues (e.g., database migrations, environment variables, static files).
-* **API Documentation Standards**: Appreciated the value of auto-generated, interactive API documentation for clarity and collaboration.
+- **End-to-End REST API Architecture**: Gained deep insight into designing and implementing a complete RESTful API with Django and DRF.
+- **Secure Authentication & Authorization**: Mastered JWT token-based authentication and implementing permission layers.
+- **Payment Workflows & Webhook Handling**: Understood the complexities of integrating a payment gateway like Stripe, including the critical role of secure webhook processing and `checkout.session.completed` events for order fulfillment.
+- **Static File Serving in Production**: Emphasized the importance of Whitenoise and `collectstatic` for serving static assets in a deployed Django application.
+- **Dockerized Development & Deployment**: Gained hands-on experience in containerizing a Django application and deploying it to a PaaS like Railway, including debugging common deployment issues (e.g., database migrations, environment variables, static files).
+- **API Documentation Standards**: Appreciated the value of auto-generated, interactive API documentation for clarity and collaboration.
 
 ## 👤 Author
 
@@ -250,14 +250,14 @@ Backend Developer | ALX ProDev Graduate
 
 ## 📌 Project Status
 
-* ✅ Custom User Authentication (JWT)
-* ✅ Products & Categories CRUD
-* ✅ Product Variants & Shipping Addresses
-* ✅ Pagination, Filtering & Sorting
-* ✅ PostgreSQL Optimization & Migrations
-* ✅ Stripe Checkout Session Integration
-* ✅ Robust Stripe Webhook Handling
-* ✅ Redis Caching Setup
-* ✅ Swagger/OpenAPI Documentation
-* ✅ Dockerized Development & Deployment to Railway
-* ✅ Continuous Deployment
+- ✅ Custom User Authentication (JWT)
+- ✅ Products & Categories CRUD
+- ✅ Product Variants & Shipping Addresses
+- ✅ Pagination, Filtering & Sorting
+- ✅ PostgreSQL Optimization & Migrations
+- ✅ Stripe Checkout Session Integration
+- ✅ Robust Stripe Webhook Handling
+- ✅ Redis Caching Setup
+- ✅ Swagger/OpenAPI Documentation
+- ✅ Dockerized Development & Deployment to Railway
+- ✅ Continuous Deployment
