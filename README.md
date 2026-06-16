@@ -2,7 +2,7 @@
 
 A robust, scalable, and secure backend system built with Django and PostgreSQL to power an e-commerce product catalog. This project is part of my ALX Project Nexus submission and demonstrates practical application of backend engineering principles learned during the ProDev Backend Engineering Program. It's designed to be the core API for a modern e-commerce platform.
 
-## 📌 Project Overview
+## Project Overview
 
 This backend simulates a real-world e-commerce application, providing comprehensive APIs for:
 
@@ -17,7 +17,7 @@ This backend simulates a real-world e-commerce application, providing comprehens
 
 The application is containerized with Docker and deployed to Railway, utilizing continuous integration for automated deployments.
 
-## 🧰 Technologies Used
+## Technologies Used
 
 - **Python + Django** — Core backend web framework
 - **PostgreSQL** — Primary relational database
@@ -32,9 +32,9 @@ The application is containerized with Docker and deployed to Railway, utilizing 
 - **Django Extensions** — Provides useful extensions like runscript for seeding
 - **GitHub Actions** — CI/CD pipeline for automated testing and deployment to Railway
 
-## 🚀 Key Features
+## Key Features
 
-### ✅ Core API Endpoints
+### Core API Endpoints
 
 - **User Management**: Registration, JWT-based login, and profile management.
 - **Product & Category Management**: Full CRUD operations for products, product variants, and categories.
@@ -42,29 +42,29 @@ The application is containerized with Docker and deployed to Railway, utilizing 
 - **Order Management**: Create orders from carts, with detailed order item and shipping address snapshots.
 - **Shipping Addresses**: Manage multiple shipping addresses per user.
 
-### 🔎 Advanced API Querying
+### Advanced API Querying
 
 - **Filtering**: Products by category, name, active status, etc.
 - **Sorting**: Products by various criteria (e.g., price, creation date).
 - **Pagination**: Efficient retrieval of large datasets.
 
-### 💳 Payment Integration
+### Payment Integration
 
 - **Stripe Checkout Sessions**: Seamless and secure payment flow via Stripe's hosted checkout page.
 - **Stripe Webhook Handling**: Asynchronous updates for payment success/failure, ensuring order fulfillment reliability.
 - **Secure handling of sensitive payment information** (handled by Stripe).
 
-### 📑 API Documentation
+### API Documentation
 
 - **Swagger UI**: Interactive and auto-generated API documentation available at the `/swagger/` endpoint, providing a clear interface for testing and understanding all API capabilities.
 - **Redoc**: Alternative documentation at `/redoc/`.
 
-### ⚡ Asynchronous Task Processing
+### Asynchronous Task Processing
 
 - **Celery & RabbitMQ**: Offloads resource-intensive tasks, such as sending order confirmation emails, to background workers.
 - **Redis**: Used as the result backend for Celery, storing task results and metadata.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 
@@ -171,7 +171,7 @@ To get the project running on your local machine for development:
 
 Your API should now be running locally at `http://127.0.0.1:8000/`.
 
-## 🚀 Deployment (AWS & Supabase)
+## Deployment (AWS & Supabase)
 
 This backend is continuously deployed using an AWS instance and Supabase.
 
@@ -183,7 +183,7 @@ This backend is continuously deployed using an AWS instance and Supabase.
 **Live API Documentation:** Access the interactive Swagger UI for the deployed application at:
 [API Documentation](http://51.20.119.5:8002/swagger/)
 
-## 🔑 Authentication (JWT) Workflow
+## Authentication (JWT) Workflow
 
 The API uses JWT (JSON Web Tokens) for secure authentication.
 
@@ -198,7 +198,7 @@ In Swagger UI, use the "Authorize" button at the top to set this header for all 
 
 - **Refresh Token**: When the access token expires, use the refresh token with a `POST` request to `/api/token/refresh/` to obtain a new access token.
 
-## 📚 API Endpoints Overview
+## API Endpoints Overview
 
 | Endpoint                 | Method        | Description                                |
 | ------------------------ | ------------- | ------------------------------------------ |
@@ -214,26 +214,26 @@ In Swagger UI, use the "Authorize" button at the top to set this header for all 
 
 Interactive API documentation (Swagger UI) |
 
-## 📈 Optimization Techniques Implemented
+## Optimization Techniques Implemented
 
 - **Database Indexing**: Strategic use of database indexes on frequently queried fields to speed up data retrieval.
 - **Query Optimization**: Utilizing Django ORM's `select_related` and `prefetch_related` to minimize database queries for related objects.
 - **Background Tasks**: Offloading long-running or non-critical operations to Celery, preventing API blocking and improving user experience.
 
-## 🧪 Testing
+## Testing
 
 - **API Endpoints**: Thoroughly tested using Postman for individual requests and Swagger UI for interactive exploration and automated request generation.
 - **Payment Flow**: Tested end-to-end with Stripe's test card numbers and simulated payment events from the Stripe Dashboard and Stripe CLI.
 - **Webhooks**: Verified robust webhook handling by simulating various Stripe events using the `stripe trigger` command and monitoring application logs on Railway.
 
-## 🔄 Version Control & Workflow
+## Version Control & Workflow
 
 - **Atomic Commits**: Maintaining a history of small, self-contained changes with descriptive commit messages.
 - **Feature-Branch Workflow**: Development occurs on dedicated feature, fix, or performance branches (feat/, fix/, perf/ prefixes) to ensure a clean main branch.
 - **Organized Codebase**: Adhering to Django conventions and clear naming for maintainability.
 - **.gitignore**: Properly configured to exclude sensitive information and unnecessary files from the repository.
 
-## 🧠 Lessons Learned
+## Lessons Learned
 
 - **End-to-End REST API Architecture**: Gained deep insight into designing and implementing a complete RESTful API with Django and DRF.
 - **Secure Authentication & Authorization**: Mastered JWT token-based authentication and implementing permission layers.
