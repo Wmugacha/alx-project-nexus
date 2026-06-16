@@ -1,0 +1,20 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every day
+    - cron: "0 0 * * *"
+  workflow_dispatch: # Allows you to run this manually from the Actions tab to test it
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase PostgreSQL
+        env:
+          # Pulls the connection string from GitHub Secrets
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "Connecting to Supabase to prevent inactivity pause..."
+          psql "$SUPABASE_DB_URL" -c "SELECT 1;"
+          echo "Database ping successful."
