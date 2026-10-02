@@ -181,7 +181,7 @@ This backend is continuously deployed using an AWS instance and Supabase.
 - **Environment Variables**: All sensitive keys and configurations (e.g., `DATABASE_URL`, `SECRET_KEY`, Stripe keys) are securely managed on the AWS instance and injected into the containers.
 
 **Live API Documentation:** Access the interactive Swagger UI for the deployed application at:
-[API Documentation](http://51.20.119.5:8002/swagger/)
+[API Documentation](http://136.112.152.186:8002/swagger/)
 
 ## Authentication (JWT) Workflow
 
